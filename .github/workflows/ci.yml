@@ -14,4 +14,4 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
 
       - run: cargo build
-      - run: cargo test -- --test-threads=1
+      - run: cargo test --lib
