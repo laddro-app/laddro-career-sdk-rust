@@ -81,6 +81,7 @@ pub struct TemplateDetail {
 pub struct Model {
     pub id: String,
     pub name: String,
+    #[serde(default)]
     pub recommended: bool,
 }
 

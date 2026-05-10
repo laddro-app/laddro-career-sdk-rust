@@ -67,7 +67,7 @@ impl Client {
     }
 
     pub async fn render_resume(&self, id: &str, opts: &RenderOptions) -> Result<Vec<u8>, Error> {
-        self.post_binary(&format!("/v1/resumes/{}/render", id), opts).await
+        self.put_binary(&format!("/v1/resumes/{}/render", id), opts).await
     }
 
     pub async fn tailor(&self, req: &TailorRequest) -> Result<Vec<u8>, Error> {
@@ -96,7 +96,7 @@ impl Client {
     }
 
     pub async fn render_cover_letter(&self, id: &str, opts: &RenderOptions) -> Result<Vec<u8>, Error> {
-        self.post_binary(&format!("/v1/cover-letters/{}/render", id), opts).await
+        self.put_binary(&format!("/v1/cover-letters/{}/render", id), opts).await
     }
 
     pub async fn get_settings(&self) -> Result<SettingsResponse, Error> {
@@ -130,6 +130,15 @@ impl Client {
 
     async fn post_binary<B: Serialize>(&self, path: &str, body: &B) -> Result<Vec<u8>, Error> {
         let resp = self.http.post(format!("{}{}", self.base_url, path))
+            .header("x-api-key", &self.api_key)
+            .json(body)
+            .send()
+            .await?;
+        self.handle_binary_response(resp).await
+    }
+
+    async fn put_binary<B: Serialize>(&self, path: &str, body: &B) -> Result<Vec<u8>, Error> {
+        let resp = self.http.put(format!("{}{}", self.base_url, path))
             .header("x-api-key", &self.api_key)
             .json(body)
             .send()
