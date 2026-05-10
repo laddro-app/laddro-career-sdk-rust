@@ -5,7 +5,7 @@ edition = "2021"
 description = "Rust SDK for the Laddro Career API"
 license = "MIT"
 repository = "https://github.com/laddro-app/laddro-career-sdk-rust"
-homepage = "https://developers.laddro.com"
+homepage = "https://docs.laddro.com"
 keywords = ["laddro", "career", "resume", "api"]
 categories = ["api-bindings"]
 
