@@ -89,12 +89,12 @@ pub struct Model {
 pub struct ModelProvider {
     pub provider: String,
     pub name: String,
-    #[serde(rename = "baseUrl")]
+    #[serde(rename = "baseUrl", default)]
     pub base_url: String,
     pub models: Vec<Model>,
-    #[serde(rename = "keyPrefix")]
+    #[serde(rename = "keyPrefix", default)]
     pub key_prefix: String,
-    #[serde(rename = "docsUrl")]
+    #[serde(rename = "docsUrl", default)]
     pub docs_url: String,
 }
 
