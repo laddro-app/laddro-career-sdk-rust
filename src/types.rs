@@ -1,5 +1,19 @@
 use serde::{Deserialize, Serialize};
 
+#[derive(Debug, Clone)]
+pub struct ArtifactMetadata {
+    pub resume_id: Option<String>,
+    pub cover_letter_id: Option<String>,
+    pub filename: Option<String>,
+    pub mime_type: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct BinaryResponse {
+    pub data: Vec<u8>,
+    pub metadata: ArtifactMetadata,
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct ResumeSummary {
     pub id: String,
@@ -154,6 +168,9 @@ pub struct CoverLetterSummary {
     #[serde(rename = "coverLetterId")]
     pub cover_letter_id: String,
     pub title: String,
+    #[serde(rename = "letterContent")]
+    pub letter_content: Option<String>,
+    pub data: Option<serde_json::Value>,
     #[serde(rename = "createdAt")]
     pub created_at: String,
     #[serde(rename = "updatedAt")]
