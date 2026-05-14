@@ -1,4 +1,5 @@
 use reqwest::Client as HttpClient;
+use reqwest::header::HeaderMap;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
@@ -74,6 +75,10 @@ impl Client {
         self.post_binary("/v1/tailor", req).await
     }
 
+    pub async fn tailor_detailed(&self, req: &TailorRequest) -> Result<BinaryResponse, Error> {
+        self.post_binary_detailed("/v1/tailor", req).await
+    }
+
     pub async fn export_pdf(&self, req: &ExportRequest) -> Result<Vec<u8>, Error> {
         self.post_binary("/v1/export", req).await
     }
@@ -93,6 +98,10 @@ impl Client {
 
     pub async fn generate_cover_letter(&self, req: &GenerateCoverLetterRequest) -> Result<Vec<u8>, Error> {
         self.post_binary("/v1/cover-letters/generate", req).await
+    }
+
+    pub async fn generate_cover_letter_detailed(&self, req: &GenerateCoverLetterRequest) -> Result<BinaryResponse, Error> {
+        self.post_binary_detailed("/v1/cover-letters/generate", req).await
     }
 
     pub async fn render_cover_letter(&self, id: &str, opts: &RenderOptions) -> Result<Vec<u8>, Error> {
@@ -129,12 +138,16 @@ impl Client {
     }
 
     async fn post_binary<B: Serialize>(&self, path: &str, body: &B) -> Result<Vec<u8>, Error> {
+        Ok(self.post_binary_detailed(path, body).await?.data)
+    }
+
+    async fn post_binary_detailed<B: Serialize>(&self, path: &str, body: &B) -> Result<BinaryResponse, Error> {
         let resp = self.http.post(format!("{}{}", self.base_url, path))
             .header("x-api-key", &self.api_key)
             .json(body)
             .send()
             .await?;
-        self.handle_binary_response(resp).await
+        self.handle_binary_response_detailed(resp).await
     }
 
     async fn put_binary<B: Serialize>(&self, path: &str, body: &B) -> Result<Vec<u8>, Error> {
@@ -172,11 +185,19 @@ impl Client {
     }
 
     async fn handle_binary_response(&self, resp: reqwest::Response) -> Result<Vec<u8>, Error> {
+        Ok(self.handle_binary_response_detailed(resp).await?.data)
+    }
+
+    async fn handle_binary_response_detailed(&self, resp: reqwest::Response) -> Result<BinaryResponse, Error> {
         let status = resp.status().as_u16();
         if status >= 400 {
             return Err(self.parse_error(resp, status).await);
         }
-        Ok(resp.bytes().await?.to_vec())
+        let metadata = artifact_metadata(resp.headers());
+        Ok(BinaryResponse {
+            data: resp.bytes().await?.to_vec(),
+            metadata,
+        })
     }
 
     async fn parse_error(&self, resp: reqwest::Response, status: u16) -> Error {
@@ -192,4 +213,33 @@ impl Client {
             code: body.code,
         })
     }
+}
+
+fn artifact_metadata(headers: &HeaderMap) -> ArtifactMetadata {
+    let content_type = header_value(headers, "content-type")
+        .and_then(|value| value.split(';').next().map(str::to_string));
+
+    ArtifactMetadata {
+        resume_id: header_value(headers, "x-resume-id"),
+        cover_letter_id: header_value(headers, "x-cover-letter-id"),
+        filename: content_disposition_filename(header_value(headers, "content-disposition").as_deref()),
+        mime_type: content_type,
+    }
+}
+
+fn header_value(headers: &HeaderMap, name: &str) -> Option<String> {
+    headers.get(name)
+        .and_then(|value| value.to_str().ok())
+        .map(str::to_string)
+}
+
+fn content_disposition_filename(value: Option<&str>) -> Option<String> {
+    value?.split(';').find_map(|part| {
+        let part = part.trim();
+        if !part.to_ascii_lowercase().starts_with("filename") {
+            return None;
+        }
+        let (_, filename) = part.split_once('=')?;
+        Some(filename.trim_matches('"').trim_start_matches("UTF-8''").to_string())
+    })
 }
